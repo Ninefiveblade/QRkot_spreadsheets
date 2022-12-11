@@ -1,5 +1,7 @@
 from aiogoogle import Aiogoogle
+from aiogoogle.excs import ValidationError
 from fastapi import APIRouter, Depends
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.db import get_async_session
@@ -26,12 +28,20 @@ async def get_report(
     Сформировать и получить сводку данных о закрытых проектах в
     табличном виде."""
 
-    reservations = await charity_crud.get_projects_by_completion_rate(
+    charity = await charity_crud.get_projects_by_completion_rate(
         session=session
     )
-    spreadsheetid = await spreadsheets_create(wrapper_services)
-    await set_user_permissions(spreadsheetid, wrapper_services)
-    await spreadsheets_update_value(spreadsheetid,
-                                    reservations,
-                                    wrapper_services)
-    return reservations
+    spreadsheet_id = await spreadsheets_create(wrapper_services)
+    await set_user_permissions(spreadsheet_id, wrapper_services)
+    try:
+        await spreadsheets_update_value(
+            spreadsheet_id,
+            charity,
+            wrapper_services
+        )
+    except ValidationError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=error,
+        )
+    return charity

@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from sqlalchemy import select, extract
+from sqlalchemy import select, extract, asc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.base import CRUDBase
@@ -30,12 +30,10 @@ class CRUDCharityProject(CRUDBase):
             select(self.model).where(
                 self.model.fully_invested.is_(True)
             ).order_by(
-                extract('year', self.model.close_date) -
-                extract('year', self.model.create_date),
-                extract('month', self.model.close_date) -
-                extract('month', self.model.create_date),
-                extract('day', self.model.close_date) -
-                extract('day', self.model.create_date)
+                asc(
+                    extract('epoch', CharityProject.close_date) -
+                    extract('epoch', CharityProject.create_date)
+                )
             )
         )
         return charity_project.scalars().all()
